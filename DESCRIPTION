@@ -1,0 +1,23 @@
+Package: parallelRDS
+Type: Package
+Title: parallelRDS
+Version: 0.5.0
+Authors@R: person("Mahmood", "S. Zargar", email = "m.shafeiezargar@vu.nl",
+  role = c("aut", "cre"))
+Maintainer: Mahmood S. Zargar <m.shafeiezargar@vu.nl>
+Description: Uses existing parallelized system commands to read and write 
+    compressed RDS files efficiently. The package's main functions override 
+    `readRDS` and `writeRDS` from base to introduce parallellized versions using
+    the existing system commands including `xz`, `lbzip2`, `pixz`, `pxz`, 
+    `pbzip2`, `zstd`, and `pigz`. The functions search for the appropriate 
+    compression software in the host system's path and if found, offload the 
+    handling of compression and decompression taks to the external program. The 
+    package must work on any Linux/Unix system, but not on Windows.
+License: MIT
+Encoding: UTF-8
+LazyData: false
+RoxygenNote: 7.1.0
+Imports:
+    parallel
+URL: https://github.com/retrography/parallelRDS
+BugReports: https://github.com/retrography/parallelRDS/issues
