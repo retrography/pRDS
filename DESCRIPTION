@@ -1,6 +1,6 @@
-Package: parallelRDS
+Package: pRDS
 Type: Package
-Title: parallelRDS
+Title: pRDS
 Version: 0.5.0
 Authors@R: person("Mahmood", "S. Zargar", email = "m.shafeiezargar@vu.nl",
   role = c("aut", "cre"))
@@ -13,11 +13,11 @@ Description: Uses existing parallelized system commands to read and write
     compression software in the host system's path and if found, offload the 
     handling of compression and decompression taks to the external program. The 
     package must work on any Linux/Unix system, but not on Windows.
-License: MIT
+License: GPL-2
 Encoding: UTF-8
 LazyData: false
 RoxygenNote: 7.1.0
 Imports:
     parallel
-URL: https://github.com/retrography/parallelRDS
-BugReports: https://github.com/retrography/parallelRDS/issues
+URL: https://github.com/retrography/pRDS
+BugReports: https://github.com/retrography/pRDS/issues

@@ -17,24 +17,6 @@
 #TODO Compress other formats (feather? RData?)
 #TODO Add tests devtools::use_testthat()
 
-prds <- new.env()
-
-prds$cmds <- matrix(
-  c(
-    c("zstd", "--format=gzip -cT", "-cdT", "gzip"),
-    c("pigz", "-cp", "-dcp", "gzip"),
-    c("pixz", "-tp", "-dp", "xz"),
-    c("pxz", "-cT", "-dcT", "xz"),
-    c("xz", "-zcT", "-cdT", "xz"),
-    c("lbzip2", "-czn", "-ckdn", "bzip2"),
-    c("pbzip2", "-cp", "-dcp", "bzip2")
-  ),
-  ncol = 4,
-  byrow = T
-)
-rownames(prds$cmds) <- prds$cmds[,1]
-colnames(prds$cmds) <- c("cmd", "wb", "rb", "fmt")
-
 whichcmd <- function(commands) {
   for (c in commands) {
     if (as.logical(nchar(Sys.which(c)))) return(c)
@@ -50,19 +32,20 @@ cmpfile <- function(path,
                      compression = switch(format, gzip = 6, bzip2 = 9, xz = 6),
                      cores = getOption("mc.cores"),
                      encoding = getOption("encoding")) {
+  commands <- getOption("pRDS.commands")
   mode <- match.arg(mode)
   format <- match.arg(format)
-  command <- whichcmd(prds$cmds[prds$cmds[,"fmt"] == format, "cmd"])
+  command <- whichcmd(commands[commands[,"fmt"] == format, "cmd"])
   if (compression <= 1 && compression >= 9) stop(paste("Compression level '", compression, "'not supported."))
   con <-
     if (!is.na(command)) {
       if (is.na(cores))
-        cores <- as.integer(parallel::detectCores()/2)
+        cores <- as.integer(parallel::detectCores() / 2)
       cat("Using", command, "with", cores, "cores to", switch(mode, wb = "compress...", rb="decompress..."), "\n")
       switch(mode,
              wb = pipe(
                paste(command,
-                     paste0(prds$cmds[command, mode], cores),
+                     paste0(commands[command, mode], cores),
                      paste0("-", compression),
                      ">",
                      path),
@@ -71,7 +54,7 @@ cmpfile <- function(path,
              ),
              rb = pipe(
                paste(command,
-                     paste0(prds$cmds[command, mode], cores),
+                     paste0(commands[command, mode], cores),
                      "<",
                      path),
                mode,
