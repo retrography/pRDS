@@ -8,7 +8,7 @@
       c("pixz", "-tp", "-dp", "xz"),
       c("pxz", "-cT", "-dcT", "xz"),
       c("xz", "-zcT", "-cdT", "xz"),
-      c("lbzip2", "-czn", "-ckdn", "bzip2"),
+      c("lbzip2", "-czn", "-cdn", "bzip2"),
       c("pbzip2", "-cp", "-dcp", "bzip2")
     ),
     ncol = 4,

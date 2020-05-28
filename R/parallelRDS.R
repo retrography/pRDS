@@ -1,76 +1,63 @@
-# Run the following line at the command prompt before using the functions.
-#
-#     brew install lbzip2 pigz pbzip2 pixz pxz zstd xz
-#
+# pRDS
 
-#TODO: Use saveRDS's original structure from base (create new gzfile, etc. functions instead of creating specialized saveRDS functions) (or structure from dplyr's write_rds)
-#TODO: Add a message print for all operations
-#TODO: Add quiet switch wherever it is needed
-#TODO: Make package
-#TODO: Read number of cores from options, if present?
-#TODO: Option for compression program choice (overall, and during each writeup)
-#TODO: For now when in windows always fall back to R implementation, but maybe we can work on that too? The problem is that the "file" command doens't work there. How can we detect the format oif the file?
-#TODO: Print a matrix of which software is present at module load, and set the preferred commans upfront (and maybe show a warning for windows)
-#TODO add snzip and lz4 and zstd (non-standard).
-#TODO make it possible to modify the commands matrix in runtime
-#TODO Docs
-#TODO Compress other formats (feather? RData?)
-#TODO Add tests devtools::use_testthat()
-
-whichcmd <- function(commands) {
-  for (c in commands) {
-    if (as.logical(nchar(Sys.which(c)))) return(c)
+whichcmd <-
+  function(commands) {
+    for (c in commands) {
+      if (as.logical(nchar(Sys.which(c)))) return(c)
+    }
+    return(NA)
   }
-  return(NA)
-}
 
 #' @export
-cmpfile <- function(path,
-                     mode = c("wb", "rb"),
-                     format = c("gzip", "bzip2", "xz"),
-                     # compressor = c(),
-                     compression = switch(format, gzip = 6, bzip2 = 9, xz = 6),
-                     cores = getOption("mc.cores"),
-                     encoding = getOption("encoding")) {
-  commands <- getOption("pRDS.commands")
-  mode <- match.arg(mode)
-  format <- match.arg(format)
-  command <- whichcmd(commands[commands[,"fmt"] == format, "cmd"])
-  if (compression <= 1 && compression >= 9) stop(paste("Compression level '", compression, "'not supported."))
-  con <-
-    if (!is.na(command)) {
-      if (is.na(cores))
-        cores <- as.integer(parallel::detectCores() / 2)
-      cat("Using", command, "with", cores, "cores to", switch(mode, wb = "compress...", rb="decompress..."), "\n")
-      switch(mode,
-             wb = pipe(
-               paste(command,
-                     paste0(commands[command, mode], cores),
-                     paste0("-", compression),
-                     ">",
-                     path),
-               mode,
-               encoding
-             ),
-             rb = pipe(
-               paste(command,
-                     paste0(commands[command, mode], cores),
-                     "<",
-                     path),
-               mode,
-               encoding
-             ))
-    } else {
-      cat("No suitable compression software found on the system. Falling back to R implementation.")
-      switch(
-        format,
-        gzip = gzfile(file, mode),
-        bzip2 = bzfile(file, mode),
-        xz = xzfile(file, mode)
-      )
-    }
-  return(con)
-}
+cmpfile <-
+  function(path,
+           mode = c("wb", "rb"),
+           format = c("gzip", "bzip2", "xz"),
+           # compressor = c(),
+           compression = switch(format, gzip = 6, bzip2 = 9, xz = 6),
+           cores = getOption("mc.cores"),
+           encoding = getOption("encoding")) {
+    commands <- getOption("pRDS.commands")
+    mode <- match.arg(mode)
+    format <- match.arg(format)
+    command <- whichcmd(commands[commands[,"fmt"] == format, "cmd"])
+    if (compression <= 1 && compression >= 9) stop(paste("Compression level '", compression, "'not supported."))
+    con <-
+      if (!is.na(command)) {
+        if (is.na(cores))
+          cores <- as.integer(parallel::detectCores() / 2)
+        cat("Using", command, "with", cores, "cores to",
+            switch(mode, wb = "compress...", rb="decompress..."), "\n")
+        switch(mode,
+               wb = pipe(
+                 paste(command,
+                       paste0(commands[command, mode], cores),
+                       paste0("-", compression),
+                       ">",
+                       path),
+                 mode,
+                 encoding
+               ),
+               rb = pipe(
+                 paste(command,
+                       paste0(commands[command, mode], cores),
+                       "<",
+                       path),
+                 mode,
+                 encoding
+               ))
+      } else {
+        cat("No suitable compression software found on the system.
+          Falling back to R implementation.")
+        switch(
+          format,
+          gzip = gzfile(file, mode),
+          bzip2 = bzfile(file, mode),
+          xz = xzfile(file, mode)
+        )
+      }
+    return(con)
+  }
 
 #' @export
 saveRDS <-
@@ -97,7 +84,8 @@ saveRDS <-
       else {
         # I disable this because I don't know what it is and how it works
         if (mode == "w") {
-          warning("ASCII mode not supported for compressed files. Switching to non-ASCII.")
+          warning("ASCII mode not supported for compressed files.
+                  Switching to non-ASCII.")
           mode = "wb"
         }
         cmpfile(file, mode, compress,...)
