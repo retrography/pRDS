@@ -26,7 +26,7 @@ system's package manager (brew, APT, YUM, etc). Note that not all these packages
 are available on every Linux/Unix/macOS platform. That is why pRDS supports so 
 many of them.
 
-## Use
+## Usage
 
 pRDS is designed to be a drop-in replacement for R's base RDS manipulation 
 functions. Its functions override `readRDS` and `writeRDS` to introduce new 
@@ -37,6 +37,19 @@ that are, in turn, channeled to the underlying `cmpfile` function. For
 instance you can control the number of cores to be used by setting the `core`
 parameter, or change the compression level by passing a value to the
 `compression` parameter.
+
+## Why
+
+Writing RDS files is rather fast if the compression option is switched off. But
+with compression turned on saving large quantities of data quickly becomes 
+impossible, as R's base implementation uses only a single thread. One way to 
+solve this issue is to create the appropriate C bindings for the existiing 
+compression libraries. But bindings are hard to maintain and subject to breaking
+when the upstream changes. Quite a few projects of this kind have already gone 
+bust. CLI interfaces, though, rarely change, and OS package managers take care
+of maintaining them. pRDS smartly takes the dumb approach to fast compression /
+decompression: Relying on the external, well-maintained tools that we all have
+access to on our computers.
 
 ## License
 
