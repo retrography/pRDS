@@ -18,6 +18,8 @@ Encoding: UTF-8
 LazyData: false
 RoxygenNote: 7.1.0
 Imports:
-    parallel
+    parallel,
+    pkgbuild,
+    devtools
 URL: https://github.com/retrography/pRDS
 BugReports: https://github.com/retrography/pRDS/issues

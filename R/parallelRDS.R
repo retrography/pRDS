@@ -1,62 +1,91 @@
 # pRDS
 
-whichcmd <-
-  function(commands) {
-    for (c in commands) {
-      if (as.logical(nchar(Sys.which(c)))) return(c)
-    }
-    return(NA)
+cmdAvail <-
+  function(command) {as.logical(nchar(Sys.which(command)))}
+
+#' @export
+getDefaultCmd <-
+  function(format) {
+    getOption(paste("pRDS", format, "default", sep = "."))
   }
 
 #' @export
-cmpfile <-
+setDefaultCmd <-
+  function(format, command) {
+    if (command %in% (
+      commands[commands[, "fmt"] == format &
+               commands[, "avail"] == "TRUE", "cmd"])) {
+      defs <- list()
+      defs[paste("pRDS", format, "default", sep = ".")] <- command
+      options(defs[paste("pRDS", format, "default", sep = ".")])
+    }
+  }
+
+fmtDetect <- function(file) {
+  if (!cmdAvail("file")) return("")
+  fileDetails <-
+    system2(
+      "file",
+      args = file,
+      stdout = TRUE
+    )
+  selector <-
+    sapply(
+      c("gzip", "XZ", "bzip2"),
+      function (x) {grepl(x, fileDetails)}
+    )
+  tolower(names(selector)[selector])
+}
+
+#' @export
+cmpFile <-
   function(path,
            mode = c("wb", "rb"),
            format = c("gzip", "bzip2", "xz"),
-           # compressor = c(),
+           compressor = getDefaultCmd(format),
            compression = switch(format, gzip = 6, bzip2 = 9, xz = 6),
            cores = getOption("mc.cores"),
            encoding = getOption("encoding")) {
+    if (compression <= 1 && compression >= 9)
+      stop(paste("Compression level '", compression, "'not supported."))
+    if (is.na(cores))
+      cores <- as.integer(parallel::detectCores() / 2)
     commands <- getOption("pRDS.commands")
     mode <- match.arg(mode)
     format <- match.arg(format)
-    command <- whichcmd(commands[commands[,"fmt"] == format, "cmd"])
-    if (compression <= 1 && compression >= 9) stop(paste("Compression level '", compression, "'not supported."))
-    con <-
-      if (!is.na(command)) {
-        if (is.na(cores))
-          cores <- as.integer(parallel::detectCores() / 2)
-        cat("Using", command, "with", cores, "cores to",
-            switch(mode, wb = "compress...", rb="decompress..."), "\n")
+    if (compressor %in% rownames(commands)) {
+      message("Using ", compressor, " with ", cores, " cores to ",
+              switch(mode, wb = "compress...", rb = "decompress..."),
+              appendLF = T)
+      command <-
         switch(mode,
-               wb = pipe(
-                 paste(command,
-                       paste0(commands[command, mode], cores),
-                       paste0("-", compression),
+               wb =
+                 paste(compressor,
+                       gsub('%', compression,
+                            gsub("#", cores, commands[compressor, mode])
+                       ),
                        ">",
-                       path),
-                 mode,
-                 encoding
-               ),
-               rb = pipe(
-                 paste(command,
-                       paste0(commands[command, mode], cores),
+                       paste0('"', path, '"')
+                 )
+               ,
+               rb =
+                 paste(compressor,
+                       gsub("#", cores, commands[compressor, mode]),
                        "<",
-                       path),
-                 mode,
-                 encoding
-               ))
-      } else {
-        cat("No suitable compression software found on the system.
-          Falling back to R implementation.")
-        switch(
-          format,
-          gzip = gzfile(file, mode),
-          bzip2 = bzfile(file, mode),
-          xz = xzfile(file, mode)
+                       paste0('"', path, '"')
+                 )
         )
-      }
-    return(con)
+      #message("Full command: ", command, appendLF = T)
+      pipe(command, mode, encoding)
+    } else {
+      message("No suitable compression software found on the system. Falling back to R implementation.", appendLF = F)
+      switch(
+        format,
+        gzip = gzfile(file, mode),
+        bzip2 = bzfile(file, mode),
+        xz = xzfile(file, mode)
+      )
+    }
   }
 
 #' @export
@@ -78,7 +107,7 @@ saveRDS <-
         "w"
       con <- if (is.logical(compress))
         if (compress)
-          cmpfile(file, mode, "gzip", ...)
+          cmpFile(file, mode, "gzip", ...)
       else
         file(file, mode)
       else {
@@ -88,7 +117,7 @@ saveRDS <-
                   Switching to non-ASCII.")
           mode = "wb"
         }
-        cmpfile(file, mode, compress,...)
+        cmpFile(file, mode, compress,...)
       }
       on.exit(close(con))
     }
@@ -107,31 +136,22 @@ readRDS <-
   function (file, refhook = NULL, ...) {
     if (is.character(file)) {
       if (!file.exists(file)) stop(paste(file, "does not exist!"))
-      fileDetails <-
-        system2(
-          "file",
-          args = file,
-          stdout = TRUE
-        )
-      selector <-
-        sapply(
-          c("gzip", "XZ", "bzip2"),
-          function (x) {grepl(x, fileDetails)}
-        )
       format <-
-        tolower(names(selector)[selector])
+        fmtDetect(file)
       con <-
-        if (length(format) == 0) {
-          file(file, "rb")
-        } else {
-          cmpfile(file, "rb", format = format, ...)
-        }
+        if (length(format) == 0)
+          gzfile(file, "rb")
+        else
+          cmpFile(file, "rb", format = format, ...)
       on.exit(close(con))
     }
     else if (inherits(file, "connection"))
-      con <- if (inherits(file, "url"))
-        gzcon(file)
-    else file
-    else stop("bad 'file' argument")
+      con <-
+        if (inherits(file, "url"))
+          gzcon(file)
+        else
+          file
+    else
+      stop("Bad 'file' argument")
     .Internal(unserializeFromConn(con, refhook))
   }
