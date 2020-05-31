@@ -1,7 +1,7 @@
 Package: pRDS
 Type: Package
 Title: pRDS
-Version: 0.5.0
+Version: 0.7.0
 Authors@R: person("Mahmood", "S. Zargar", email = "m.shafeiezargar@vu.nl",
   role = c("aut", "cre"))
 Maintainer: Mahmood S. Zargar <m.shafeiezargar@vu.nl>
