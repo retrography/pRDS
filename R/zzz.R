@@ -47,12 +47,13 @@
 
   for (f in unique(commands[, "fmt"])) {
     commands[commands[, "avail"] == TRUE & commands[, "fmt"] == f, "def"][1] <- "TRUE"
-    op.pRDS[paste("pRDS", f, "default", sep = ".")] <- commands[commands[, "def"] == TRUE & commands[, "fmt"] == f, "cmd"]
+    fmtdef <- commands[commands[, "def"] == TRUE & commands[, "fmt"] == f, "cmd"]
+    op.pRDS[paste("pRDS", f, "default", sep = ".")] <- ifelse(is.null(fmtdef), NA, fmtdef)
   }
 
   message("Available compressors and the default for each format:", appendLF = T)
   tbl <- capture.output(prmatrix(
-    gsub("TRUE", "√", gsub("FALSE", "", commands[,4:6])),
+    gsub("TRUE", "√", gsub("FALSE", "-", commands[,4:6])),
     quote=F,
     collab = c("Format", "Available", "Default")
   ))
