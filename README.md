@@ -7,6 +7,21 @@ capabalities of modern computers. The package looks for the appropriate
 compression software in the host system's path and if found, offload the 
 handling of compression and decompression tasks to the external program. 
 
+## Why
+
+Writing RDS files is rather fast if the compression option is switched off. But
+with compression turned on saving large quantities of data quickly becomes 
+impossible, as R's base implementation uses only a single thread. One way to 
+solve this issue is to create the appropriate C bindings for the existiing 
+compression libraries. But bindings are hard to maintain and subject to breaking
+when the upstream changes. Quite a few projects of this kind have already gone 
+bust. CLI interfaces, though, rarely change, and OS package managers take care
+of maintaining them. pRDS smartly takes the dumb approach to fast compression /
+decompression: Relying on the external, well-maintained tools that we all have
+access to on our computers. This is particularly useful in HPC environments and
+analytic servers where we don't have access to all the libraries we want, but 
+where most popular compression packages are pre-installed.
+
 ## Installation
 
 You can easily use `devtools` to install pRDS:
@@ -68,20 +83,28 @@ will have to set the `mc.cores` option:
 options(mc.cores = parallel::detectCores())
 ```
 
-## Why
+## Benchmark
 
-Writing RDS files is rather fast if the compression option is switched off. But
-with compression turned on saving large quantities of data quickly becomes 
-impossible, as R's base implementation uses only a single thread. One way to 
-solve this issue is to create the appropriate C bindings for the existiing 
-compression libraries. But bindings are hard to maintain and subject to breaking
-when the upstream changes. Quite a few projects of this kind have already gone 
-bust. CLI interfaces, though, rarely change, and OS package managers take care
-of maintaining them. pRDS smartly takes the dumb approach to fast compression /
-decompression: Relying on the external, well-maintained tools that we all have
-access to on our computers. This is particularly useful in HPC environments and
-analytic servers where we don't have access to all the libraries we want, but 
-where most popular compression packages are pre-installed.
+I have made this benchmark on my mac (i7/4 cores/8 threads) in a loosely controlled environment, so not in an entirely scientific manner. The test file consisted of about 17 million tweets (3GB CSV). All tests were conducted using the default compression levels (gzip = 6, bzip2 = 9, xz = 6). Four of the tools don't work as intended on my computer.
+
+| Compressor | Format       | Write (sec) | Read (sec) | Size (MB) | Note                                                        |
+| ---------- | ------------ | ----------- | ---------- | --------- | ----------------------------------------------------------- |
+| R native   | Uncompressed | 99          | 42         | 4236      |                                                             |
+| R native   | gzip         | 296         | 62         | 1492      |                                                             |
+| pigz       | gzip         | 136         | 35         | 1497      |                                                             |
+| zstd       | gzip         | -           | -          | -         | Not parallel                                                |
+| R native   | xz           | 2626        | 105        | 772       |                                                             |
+| 7z         | xz           | 580         | 83         | 741       |                                                             |
+| xz         | xz           | 469         | 64         | 795       |                                                             |
+| pixz       | xz           | 443         | 63         | 805       |                                                             |
+| pxz        | xz           | -           | -          | -         | Doesn't compile                                             |
+| zstd       | xz           | -           | -          | -         | Not parallel                                                |
+| R native   | bzip2        | 519         | 229        | 1054      |                                                             |
+| lbzip2     | bzip2        | 222         | 55         | 1053      |                                                             |
+| pbzip2     | bzip2        | -           | -          | -         | Hangs                                                       |
+| 7z         | bzip2        | 1060        | 82         | 704       | Compression parameter bad? Only decompresses its own files. |
+
+Make sure to test the different tools on your platform and particular setup, as your tools may not have been compiled or configured properly for parallel operation.
 
 ## License
 

@@ -14,8 +14,8 @@
 
   commands <- matrix(
     c(
-      c("zstd", "--format=gzip -cT# -%", "-cdT#", "gzip"),
       c("pigz", "-cp# -%", "-dcp#", "gzip"),
+      c("zstd", "--format=gzip -cT# -%", "-cdT#", "gzip"),
       c("pixz", "-tp# -%", "-dp#", "xz"),
       c("pxz", "-cT# -%", "-dcT#", "xz"),
       c("xz", "-zcT# -%", "-cdT#", "xz"),

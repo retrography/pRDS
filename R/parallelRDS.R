@@ -12,6 +12,7 @@ getDefaultCmd <-
 #' @export
 setDefaultCmd <-
   function(format, command) {
+    commands <- getOption("pRDS.commands")
     if (command %in% (
       commands[commands[, "fmt"] == format &
                commands[, "avail"] == "TRUE", "cmd"])) {
