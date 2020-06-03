@@ -41,7 +41,7 @@ fmtDetect <- function(file) {
 #' @export
 cmpFile <-
   function(path,
-           mode = c("wb", "rb"),
+           mode = c("w", "wb", "rb"),
            format = c("gzip", "bzip2", "xz"),
            compressor = getDefaultCmd(format),
            compression = switch(format, gzip = 6, bzip2 = 9, xz = 6),
@@ -55,23 +55,25 @@ cmpFile <-
     mode <- match.arg(mode)
     format <- match.arg(format)
     if (compressor %in% rownames(commands)) {
+      rw <- substr(mode, 1, 1)
+      path <- path.expand(path)
       message("Using ", compressor, " with ", cores, " cores to ",
-              switch(mode, wb = "compress...", rb = "decompress..."),
+              switch(rw, w = "compress...", r = "decompress..."),
               appendLF = T)
       command <-
-        switch(mode,
-               wb =
+        switch(rw,
+               w =
                  paste(compressor,
                        gsub('%', compression,
-                            gsub("#", cores, commands[compressor, mode])
+                            gsub("#", cores, commands[compressor, rw])
                        ),
                        ">",
                        paste0('"', path, '"')
                  )
                ,
-               rb =
+               r =
                  paste(compressor,
-                       gsub("#", cores, commands[compressor, mode]),
+                       gsub("#", cores, commands[compressor, rw]),
                        "<",
                        paste0('"', path, '"')
                  )
@@ -82,13 +84,26 @@ cmpFile <-
       message("No suitable compression software found on the system. Falling back to R implementation.", appendLF = F)
       switch(
         format,
-        gzip = gzfile(file, mode),
-        bzip2 = bzfile(file, mode),
-        xz = xzfile(file, mode)
+        gzip = gzfile(path, mode),
+        bzip2 = bzfile(path, mode),
+        xz = xzfile(path, mode)
       )
     }
   }
 
+#' Read/write RDS streams
+#'
+#' Drop-in replacements for [saveRDS][base::saveRDS()] and [readRDS][base::readRDS()] from [base]
+#' allowing use of external multi-threaded programs for faster
+#' compression/decompression. The functions also allow use of additional
+#' parameters, which are directly passed to [cmpFile].
+#'
+#' @param object R object to serialize.
+#' @param file a [connection] or the name of the file where the R object is saved
+#'    to or read from.
+#' @param ascii a logical. If TRUE or NA, an ASCII representation is written;
+#'    otherwise (default), a binary one is used. See the comments in the help
+#'    for [save].
 #' @export
 saveRDS <-
   function (object,
@@ -106,18 +121,13 @@ saveRDS <-
         "wb"
       else
         "w"
-      con <- if (is.logical(compress))
-        if (compress)
-          cmpFile(file, mode, "gzip", ...)
-      else
-        file(file, mode)
+      con <-
+        if (is.logical(compress))
+          if (compress)
+            cmpFile(file, mode, "gzip",...)
+          else
+            file(file, mode)
       else {
-        # I disable this because I don't know what it is and how it works
-        if (mode == "w") {
-          warning("ASCII mode not supported for compressed files.
-                  Switching to non-ASCII.")
-          mode = "wb"
-        }
         cmpFile(file, mode, compress,...)
       }
       on.exit(close(con))

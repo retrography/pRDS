@@ -30,7 +30,7 @@
   )
   rownames(commands) <- commands[,1]
   commands <- cbind(commands, FALSE, FALSE)
-  colnames(commands) <- c("cmd", "wb", "rb", "fmt", "avail", "def")
+  colnames(commands) <- c("cmd", "w", "r", "fmt", "avail", "def")
 
   commands[, "avail"] <- unlist(lapply(rownames(commands), cmdAvail))
 
